@@ -19,12 +19,12 @@ export default async (req: Request) => {
     return json({ error: "method_not_allowed" }, 405);
   }
 
-  const apiKey = Netlify.env.get("BRAVE_SEARCH_API_KEY");
+  const apiKey = Netlify.env.get("TAVILY_API_KEY");
   if (!apiKey) {
     return json(
       {
         error: "missing_api_key",
-        message: "BRAVE_SEARCH_API_KEY n'est pas configurée sur ce site Netlify (Site configuration > Environment variables).",
+        message: "TAVILY_API_KEY n'est pas configurée sur ce site Netlify (Site configuration > Environment variables).",
       },
       500
     );
@@ -51,16 +51,19 @@ export default async (req: Request) => {
 
   try {
     for (const site of sites) {
-      const q = `${query.trim()} site:${site.domain}`;
-      const resp = await fetch(
-        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=3`,
-        {
-          headers: {
-            Accept: "application/json",
-            "X-Subscription-Token": apiKey,
-          },
-        }
-      );
+      const resp = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          query: query.trim(),
+          include_domains: [site.domain],
+          max_results: 3,
+          search_depth: "basic",
+        }),
+      });
 
       if (!resp.ok) {
         results.push({ store: site.store, domain: site.domain, error: `HTTP ${resp.status}` });
@@ -68,14 +71,14 @@ export default async (req: Request) => {
       }
 
       const data = await resp.json();
-      const webResults = (data.web && data.web.results) || [];
+      const webResults = Array.isArray(data.results) ? data.results : [];
       for (const r of webResults.slice(0, 3)) {
         results.push({
           store: site.store,
           domain: site.domain,
           url: r.url,
           title: r.title,
-          description: String(r.description || "").replace(/<[^>]+>/g, ""),
+          description: String(r.content || "").replace(/<[^>]+>/g, ""),
         });
       }
     }
