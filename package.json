@@ -1,0 +1,10 @@
+{
+  "name": "reno-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tableau de bord interactif de suivi de rénovation, générique et multi-projets, avec assistant IA intégré.",
+  "dependencies": {
+    "@netlify/blobs": "^8",
+    "@netlify/functions": "^3"
+  }
+}
